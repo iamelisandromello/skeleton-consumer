@@ -103,6 +103,13 @@ jobs:
           echo "📄 Conteúdo de terraform.tfvars:"
           cat terraform/terraform.auto.tfvars.json || echo "❌ Arquivo terraform.auto.tfvars.json não encontrado"
 
+          echo "📄 Conteúdo de terraform/main.tf (se existir):"
+          cat terraform/main.tf 2>/dev/null || echo "terraform/main.tf não encontrado ou vazio."
+
+          echo "📄 Conteúdo de terraform/modules/sqs/main.tf (se existir, ajuste o caminho):"
+          cat terraform/modules/sqs/main.tf 2>/dev/null || echo "terraform/modules/sqs/main.tf não encontrado ou vazio."
+          # Adicione mais cats para outros arquivos .tf que definem seus módulos
+
       # -------------------------------
       # 🔄 IMPORT, VALIDATE & APPLY TERRAFORM
       # -------------------------------    
