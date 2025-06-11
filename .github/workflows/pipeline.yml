@@ -41,6 +41,37 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       # -------------------------------
+      # ⚙️ DEBUG: Verificar estrutura e conteúdo do Terraform Template
+      # ADICIONADO PARA DEBUG
+      # -------------------------------
+      - name: Debug - Verificar estrutura e conteúdo do Terraform Template
+        run: |
+          echo "📂 Listando arquivos e diretórios recursivamente em 'terraform/'"
+          ls -R terraform/ || echo "❌ Diretório 'terraform/' não encontrado ou vazio."
+          echo "---"
+
+          echo "📄 Conteúdo de terraform/main.tf (se existir):"
+          cat terraform/main.tf 2>/dev/null || echo "❌ terraform/main.tf não encontrado ou vazio."
+          echo "---"
+
+          echo "📄 Conteúdo de terraform/variables.tf (se existir):"
+          cat terraform/variables.tf 2>/dev/null || echo "❌ terraform/variables.tf não encontrado ou vazio."
+          echo "---"
+
+          echo "📄 Conteúdo de terraform/providers.tf (se existir):"
+          cat terraform/providers.tf 2>/dev/null || echo "❌ terraform/providers.tf não encontrado ou vazio."
+          echo "---"
+
+          echo "📄 Conteúdo de terraform/modules/sqs/main.tf (se existir, caminho ajustável):"
+          cat terraform/modules/sqs/main.tf 2>/dev/null || echo "❌ terraform/modules/sqs/main.tf não encontrado ou vazio. Verifique o caminho correto do módulo SQS."
+          echo "---"
+
+          echo "📄 Conteúdo de terraform/terraform.auto.tfvars.json (se existir):"
+          cat terraform/terraform.auto.tfvars.json 2>/dev/null || echo "❌ Arquivo terraform.auto.tfvars.json não encontrado."
+          echo "---"
+
+
+      # -------------------------------
       # ⚙️ SETUP NODE & VARS
       # -------------------------------        
       - name: Setup Node.js and Env Vars
@@ -95,21 +126,9 @@ jobs:
           PROJECT_NAME: ${{ env.PROJECT_NAME }}
           ENVIRONMENT: ${{ env.ENVIRONMENT }}
 
-      - name: Debug verificar conteúdo do terraform.auto.tfvars.json
-        run: |
-          echo "📂 Listando arquivos no diretório terraform/"
-          ls -lah terraform/
-
-          echo "📄 Conteúdo de terraform.tfvars:"
-          cat terraform/terraform.auto.tfvars.json || echo "❌ Arquivo terraform.auto.tfvars.json não encontrado"
-
-          echo "📄 Conteúdo de terraform/main.tf (se existir):"
-          cat terraform/main.tf 2>/dev/null || echo "terraform/main.tf não encontrado ou vazio."
-
-          echo "📄 Conteúdo de terraform/modules/sqs/main.tf (se existir, ajuste o caminho):"
-          cat terraform/modules/sqs/main.tf 2>/dev/null || echo "terraform/modules/sqs/main.tf não encontrado ou vazio."
-          # Adicione mais cats para outros arquivos .tf que definem seus módulos
-
+      # O debug anterior de tfvars foi substituído e aprimorado acima.
+      # Removi o passo de debug antigo para evitar redundância, mas mantive o conteúdo de terraform.auto.tfvars.json.
+      
       # -------------------------------
       # 🔄 IMPORT, VALIDATE & APPLY TERRAFORM
       # -------------------------------    
