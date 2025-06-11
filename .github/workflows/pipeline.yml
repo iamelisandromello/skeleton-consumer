@@ -24,10 +24,21 @@ jobs:
     
     steps:
       # -------------------------------
-      # 🧾 CHECKOUT
+      # 🧾 CHECKOUT Application
       # -------------------------------
       - name: Checkout code
         uses: actions/checkout@v4
+
+      # -------------------------------
+      # ⚙️ CHECKOUT Terraform Template
+      # -------------------------------            
+
+      - name: Checkout Terraform template
+        uses: actions/checkout@v4
+        with:
+          repository: iamelisandromello/skeleton-terraform-template
+          path: terraform
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       # -------------------------------
       # ⚙️ SETUP NODE & VARS
