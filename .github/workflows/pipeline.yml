@@ -19,7 +19,7 @@ env:
   TERRAFORM_PATH: terraform/terraform 
   # NOVO: Variável de ambiente para controlar a criação da SQS
   # Defina como 'false' se não quiser criar a fila SQS
-  CREATE_SQS_QUEUE: true 
+  CREATE_SQS_QUEUE: false 
 
 jobs:
   deploy:
