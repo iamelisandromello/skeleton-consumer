@@ -16,8 +16,10 @@ env:
   PROJECT_NAME: my-lambda
   ENVIRONMENT: staging
   S3_BUCKET_NAME: my-shared-lambdas-bucket
-  # CORRIGIDO: O caminho base do Terraform, refletindo a estrutura aninhada do repositório skeleton-terraform-template
   TERRAFORM_PATH: terraform/terraform 
+  # NOVO: Variável de ambiente para controlar a criação da SQS
+  # Defina como 'false' se não quiser criar a fila SQS
+  CREATE_SQS_QUEUE: true 
 
 jobs:
   deploy:
@@ -33,8 +35,6 @@ jobs:
       # -------------------------------
       # ⚙️ CHECKOUT Terraform Template
       # -------------------------------            
-      # O repositório skeleton-terraform-template é clonado em ./terraform
-      # Internamente, os arquivos .tf estão em ./terraform/terraform
       - name: Checkout Terraform template
         uses: actions/checkout@v4
         with:
@@ -117,16 +117,12 @@ jobs:
           AWS_REGION: ${{ env.AWS_REGION }}
           PROJECT_NAME: ${{ env.PROJECT_NAME }}
           ENVIRONMENT: ${{ env.ENVIRONMENT }}
-          # REMOVIDO: terraform_path: ${{ env.TERRAFORM_PATH }} -> Este input não é suportado pela action 'generate-tfvars'
 
       # -------------------------------
       # 🚚 MOVER terraform.auto.tfvars.json para o diretório correto
-      # NOVO PASSO: Garante que o arquivo .tfvars esteja onde o Terraform espera.
       # -------------------------------
       - name: Mover terraform.auto.tfvars.json para o diretório correto
         run: |
-          # O generate-tfvars pode criar o arquivo na raiz do projeto consumer ou na raiz do repositório clonado (./terraform/)
-          # Verificamos ambos os locais e movemos para o destino correto (${{ env.TERRAFORM_PATH }})
           if [ -f "terraform.auto.tfvars.json" ]; then
             echo "🚚 Movendo terraform.auto.tfvars.json da raiz do projeto consumer para ${{ env.TERRAFORM_PATH }}"
             mv terraform.auto.tfvars.json "${{ env.TERRAFORM_PATH }}/terraform.auto.tfvars.json"
@@ -137,7 +133,6 @@ jobs:
             echo "❌ terraform.auto.tfvars.json não encontrado nem na raiz do projeto consumer nem em terraform/. Verifique a action 'generate-tfvars' e a estrutura de diretórios."
             exit 1
           fi
-        # Apenas execute este passo se o anterior (generate-tfvars) for bem-sucedido
         if: success() 
 
       # -------------------------------
@@ -163,12 +158,14 @@ jobs:
           aws_region: ${{ env.AWS_REGION }}
           project_name: ${{ env.PROJECT_NAME }}
           environment: ${{ env.ENVIRONMENT }}
-          terraform_path: ${{ env.TERRAFORM_PATH }} # Agora aponta para terraform/terraform
+          terraform_path: ${{ env.TERRAFORM_PATH }} 
+          # NOVO: Passando a variável de controle da SQS para a action de import
+          create_sqs_queue: ${{ env.CREATE_SQS_QUEUE }} 
 
       - name: Validar Terraform
         uses: iamelisandromello/skeleton-pipeline-template/validate-terraform@main
         with:
-          terraform_path: ${{ env.TERRAFORM_PATH }} # Agora aponta para terraform/terraform
+          terraform_path: ${{ env.TERRAFORM_PATH }} 
 
       - name: Terraform Plan and Apply
         uses: iamelisandromello/skeleton-pipeline-template/plan-apply-terraform@main
@@ -180,4 +177,4 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           GLOBAL_ENV_VARS_JSON: ${{ secrets.GLOBAL_ENV_VARS_JSON }}
           ENVIRONMENTS_JSON: ${{ secrets.ENVIRONMENTS }}
-          terraform_path: ${{ env.TERRAFORM_PATH }} # Agora aponta para terraform/terraform
+          terraform_path: ${{ env.TERRAFORM_PATH }} 
