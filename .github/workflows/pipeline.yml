@@ -17,9 +17,17 @@ env:
   ENVIRONMENT: staging
   S3_BUCKET_NAME: my-shared-lambdas-bucket
   TERRAFORM_PATH: terraform/terraform 
-  # Variável de ambiente para controlar a criação da SQS
+  # Variável para controlar a criação de uma NOVA fila SQS
   # Defina como 'false' se não quiser criar a fila SQS
-  CREATE_SQS_QUEUE: true 
+  CREATE_SQS_QUEUE: false # Definido como false para testar o novo cenário
+
+  # NOVO: Variável para controlar se usaremos uma fila SQS EXISTENTE como trigger
+  # Defina como 'true' para habilitar esta funcionalidade
+  USE_EXISTING_SQS_TRIGGER: true # Definido como true para testar o novo cenário
+
+  # NOVO: ARN da fila SQS EXISTENTE se USE_EXISTING_SQS_TRIGGER for true
+  # Substitua pelo ARN real da sua fila SQS existente, se USE_EXISTING_SQS_TRIGGER for true
+  EXISTING_SQS_QUEUE_ARN: "arn:aws:sqs:us-east-1:125702582030:skeleton-consumer-queue" # EX: Substitua pelo ARN real
 
 jobs:
   deploy:
@@ -117,8 +125,10 @@ jobs:
           AWS_REGION: ${{ env.AWS_REGION }}
           PROJECT_NAME: ${{ env.PROJECT_NAME }}
           ENVIRONMENT: ${{ env.ENVIRONMENT }}
-          # CORREÇÃO: Passando a variável de controle da SQS para a action generate-tfvars
           create_sqs_queue: ${{ env.CREATE_SQS_QUEUE }} 
+          # NOVO: Passando as novas variáveis para a action generate-tfvars
+          use_existing_sqs_trigger: ${{ env.USE_EXISTING_SQS_TRIGGER }}
+          existing_sqs_queue_arn: ${{ env.EXISTING_SQS_QUEUE_ARN }}
 
       # -------------------------------
       # 🚚 MOVER terraform.auto.tfvars.json para o diretório correto
@@ -146,7 +156,7 @@ jobs:
           ls -lah ${{ env.TERRAFORM_PATH }}/
           echo "---"
           echo "📄 Conteúdo de ${{ env.TERRAFORM_PATH }}/terraform.auto.tfvars.json (se existir):"
-          cat ${{ env.TERRAFORM_PATH }}/terraform.auto.tfvars.json 2>/dev/null || echo "❌ Arquivo terraform.auto.tfvars.json não encontrado no diretório correto."
+          cat terraform/terraform.auto.tfvars.json 2>/dev/null || echo "❌ Arquivo terraform.auto.tfvars.json não encontrado no diretório correto."
           echo "---"
 
       # -------------------------------
@@ -161,8 +171,10 @@ jobs:
           project_name: ${{ env.PROJECT_NAME }}
           environment: ${{ env.ENVIRONMENT }}
           terraform_path: ${{ env.TERRAFORM_PATH }} 
-          # Passando a variável de controle da SQS para a action de import
           create_sqs_queue: ${{ env.CREATE_SQS_QUEUE }} 
+          # NOVO: Passando as novas variáveis para a action de import
+          use_existing_sqs_trigger: ${{ env.USE_EXISTING_SQS_TRIGGER }}
+          existing_sqs_queue_arn: ${{ env.EXISTING_SQS_QUEUE_ARN }}
 
       - name: Validar Terraform
         uses: iamelisandromello/skeleton-pipeline-template/validate-terraform@main
@@ -180,3 +192,7 @@ jobs:
           GLOBAL_ENV_VARS_JSON: ${{ secrets.GLOBAL_ENV_VARS_JSON }}
           ENVIRONMENTS_JSON: ${{ secrets.ENVIRONMENTS }}
           terraform_path: ${{ env.TERRAFORM_PATH }} 
+          # NOVO: Passando as novas variáveis para a action plan-apply-terraform
+          create_sqs_queue: ${{ env.CREATE_SQS_QUEUE }}
+          use_existing_sqs_trigger: ${{ env.USE_EXISTING_SQS_TRIGGER }}
+          existing_sqs_queue_arn: ${{ env.EXISTING_SQS_QUEUE_ARN }}
