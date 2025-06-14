@@ -126,7 +126,7 @@ jobs:
           PROJECT_NAME: ${{ env.PROJECT_NAME }}
           ENVIRONMENT: ${{ env.ENVIRONMENT }}
           create_sqs_queue: ${{ env.CREATE_SQS_QUEUE }} 
-          # NOVO: Passando as novas variáveis para a action generate-tfvars
+          # PASSANDO AS NOVAS VARIÁVEIS para generate-tfvars
           use_existing_sqs_trigger: ${{ env.USE_EXISTING_SQS_TRIGGER }}
           existing_sqs_queue_arn: ${{ env.EXISTING_SQS_QUEUE_ARN }}
 
@@ -156,7 +156,7 @@ jobs:
           ls -lah ${{ env.TERRAFORM_PATH }}/
           echo "---"
           echo "📄 Conteúdo de ${{ env.TERRAFORM_PATH }}/terraform.auto.tfvars.json (se existir):"
-          cat terraform/terraform.auto.tfvars.json 2>/dev/null || echo "❌ Arquivo terraform.auto.tfvars.json não encontrado no diretório correto."
+          cat ${{ env.TERRAFORM_PATH }}/terraform.auto.tfvars.json 2>/dev/null || echo "❌ Arquivo terraform.auto.tfvars.json não encontrado no diretório correto."
           echo "---"
 
       # -------------------------------
@@ -174,7 +174,8 @@ jobs:
           create_sqs_queue: ${{ env.CREATE_SQS_QUEUE }} 
           use_existing_sqs_trigger: ${{ env.USE_EXISTING_SQS_TRIGGER }}
           existing_sqs_queue_arn: ${{ env.EXISTING_SQS_QUEUE_ARN }}
-          lambda_function_name: ${{ env.PROJECT_NAME }}${{ env.ENVIRONMENT == 'prod' ? '' : format('-%s', env.ENVIRONMENT) }} # Deriva o nome da Lambda          
+          # CORREÇÃO CRÍTICA DO LINT/YAML: Envolver toda a expressão em aspas duplas
+          lambda_function_name: "${{ env.PROJECT_NAME }}${{ env.ENVIRONMENT == 'prod' ? '' : format('-%s', env.ENVIRONMENT) }}" 
 
       - name: Validar Terraform
         uses: iamelisandromello/skeleton-pipeline-template/validate-terraform@main
@@ -192,7 +193,7 @@ jobs:
           GLOBAL_ENV_VARS_JSON: ${{ secrets.GLOBAL_ENV_VARS_JSON }}
           ENVIRONMENTS_JSON: ${{ secrets.ENVIRONMENTS }}
           terraform_path: ${{ env.TERRAFORM_PATH }} 
-          # NOVO: Passando as novas variáveis para a action plan-apply-terraform
+          # PASSANDO AS NOVAS VARIÁVEIS para plan-apply-terraform
           create_sqs_queue: ${{ env.CREATE_SQS_QUEUE }}
           use_existing_sqs_trigger: ${{ env.USE_EXISTING_SQS_TRIGGER }}
           existing_sqs_queue_arn: ${{ env.EXISTING_SQS_QUEUE_ARN }}
