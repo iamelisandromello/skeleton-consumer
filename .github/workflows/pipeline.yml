@@ -66,13 +66,11 @@ jobs:
       - name: Load Configuration Variables
         run: |
           echo "Carregando variáveis de configuração do pipeline.env..."
-          # Verifica se o arquivo pipeline.env existe (usando caminho absoluto para robustez)
-          if [ -f "${{ github.workspace }}/pipeline.env" ]; then # Usando caminho absoluto
-            # Seta as variáveis de ambiente a partir do arquivo
-            # O comando '>> $GITHUB_ENV' é o mecanismo do GitHub Actions para tornar variáveis disponíveis para passos futuros
-            cat "${{ github.workspace }}/pipeline.env" >> $GITHUB_ENV # Usando caminho absoluto
+          if [ -f "${{ github.workspace }}/pipeline.env" ]; then
+            # CORREÇÃO CRÍTICA: Filtra comentários e linhas em branco antes de adicionar ao GITHUB_ENV
+            grep -vE '^\s*#|^\s*$' "${{ github.workspace }}/pipeline.env" >> $GITHUB_ENV 
             echo "Variáveis carregadas com sucesso:"
-            cat "${{ github.workspace }}/pipeline.env" # Usando caminho absoluto
+            cat "${{ github.workspace }}/pipeline.env" # Apenas para visualização, não para adicionar ao env novamente
           else
             echo "❌ ERRO: O arquivo 'pipeline.env' não foi encontrado na raiz do repositório (${{ github.workspace }})."
             echo "Por favor, certifique-se de que 'pipeline.env' foi commitado e está na raiz do seu repositório 'consumer'."
@@ -164,7 +162,7 @@ jobs:
           s3_bucket_name: ${{ env.S3_BUCKET_NAME }}
           aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: ${{ env.AWS_REGION }} # AWS_REGION agora vem do env carregado
+          AWS_REGION: ${{ env.AWS_REGION }}
           PROJECT_NAME: ${{ env.PROJECT_NAME }}
           ENVIRONMENT: ${{ env.ENVIRONMENT }}
           create_sqs_queue: ${{ env.CREATE_SQS_QUEUE }}
@@ -223,7 +221,7 @@ jobs:
         with:
           aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws_region: ${{ env.AWS_REGION }} # AWS_REGION agora vem do env carregado
+          aws_region: ${{ env.AWS_REGION }}
           project_name: ${{ env.PROJECT_NAME }}
           environment: ${{ env.ENVIRONMENT }}
           terraform_path: ${{ env.TERRAFORM_PATH }} 
@@ -248,6 +246,6 @@ jobs:
           GLOBAL_ENV_VARS_JSON: ${{ secrets.GLOBAL_ENV_VARS_JSON }}
           ENVIRONMENTS_JSON: ${{ secrets.ENVIRONMENTS }}
           terraform_path: ${{ env.TERRAFORM_PATH }} 
-          create_sqs_queue: ${{ env.CREATE_SQS_QUEUE }} # CREATE_SQS_QUEUE agora vem do env carregado
-          use_existing_sqs_trigger: ${{ env.USE_EXISTING_SQS_TRIGGER }} # USE_EXISTING_SQS_TRIGGER agora vem do env carregado
-          existing_sqs_queue_arn: ${{ env.EXISTING_SQS_QUEUE_ARN }} # EXISTING_SQS_QUEUE_ARN agora vem do env carregado
+          create_sqs_queue: ${{ env.CREATE_SQS_QUEUE }}
+          use_existing_sqs_trigger: ${{ env.USE_EXISTING_SQS_TRIGGER }}
+          existing_sqs_queue_arn: ${{ env.EXISTING_SQS_QUEUE_ARN }}
