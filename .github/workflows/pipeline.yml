@@ -27,21 +27,55 @@ jobs:
     
     steps:
       # -------------------------------
-      # ✅ NOVO PASSO: Carregar variáveis de configuração do arquivo externo
+      # 🧾 CHECKOUT Application
+      # -------------------------------
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # -------------------------------
+      # ⚙️ CHECKOUT Terraform Template
+      # -------------------------------            
+      - name: Checkout Terraform template
+        uses: actions/checkout@v4
+        with:
+          repository: iamelisandromello/skeleton-terraform-template
+          path: terraform
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      # -------------------------------
+      # NOVO PASSO: Debug para verificar o arquivo pipeline.env
+      # -------------------------------
+      - name: Debug - List Files in Workspace
+        run: |
+          echo "Listando conteúdo do GITHUB_WORKSPACE (raiz do repositório 'consumer'):"
+          ls -lah "${{ github.workspace }}"
+          echo "---"
+          echo "Verificando se pipeline.env existe explicitamente:"
+          if [ -f "${{ github.workspace }}/pipeline.env" ]; then
+            echo "✅ pipeline.env encontrado em ${{ github.workspace }}/"
+            echo "Conteúdo de pipeline.env:"
+            cat "${{ github.workspace }}/pipeline.env"
+          else
+            echo "❌ pipeline.env NÃO encontrado em ${{ github.workspace }}/"
+          fi
+          echo "---"
+
+      # -------------------------------
+      # ✅ PASSO ORIGINAL: Carregar variáveis de configuração do arquivo externo
       # -------------------------------
       - name: Load Configuration Variables
         run: |
           echo "Carregando variáveis de configuração do pipeline.env..."
-          # Verifica se o arquivo pipeline.env existe
-          if [ -f "pipeline.env" ]; then
+          # Verifica se o arquivo pipeline.env existe (usando caminho absoluto para robustez)
+          if [ -f "${{ github.workspace }}/pipeline.env" ]; then # Usando caminho absoluto
             # Seta as variáveis de ambiente a partir do arquivo
             # O comando '>> $GITHUB_ENV' é o mecanismo do GitHub Actions para tornar variáveis disponíveis para passos futuros
-            cat pipeline.env >> $GITHUB_ENV
+            cat "${{ github.workspace }}/pipeline.env" >> $GITHUB_ENV # Usando caminho absoluto
             echo "Variáveis carregadas com sucesso:"
-            cat pipeline.env
+            cat "${{ github.workspace }}/pipeline.env" # Usando caminho absoluto
           else
-            echo "❌ ERRO: O arquivo 'pipeline.env' não foi encontrado na raiz do repositório."
-            echo "Por favor, crie 'pipeline.env' com as variáveis de configuração necessárias."
+            echo "❌ ERRO: O arquivo 'pipeline.env' não foi encontrado na raiz do repositório (${{ github.workspace }})."
+            echo "Por favor, certifique-se de que 'pipeline.env' foi commitado e está na raiz do seu repositório 'consumer'."
             exit 1
           fi
           echo "---"
@@ -57,22 +91,6 @@ jobs:
             exit 1
           fi
           echo "✅ Configuração de SQS validada com sucesso."
-
-      # -------------------------------
-      # 🧾 CHECKOUT Application
-      # -------------------------------
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      # -------------------------------
-      # ⚙️ CHECKOUT Terraform Template
-      # -------------------------------            
-      - name: Checkout Terraform template
-        uses: actions/checkout@v4
-        with:
-          repository: iamelisandromello/skeleton-terraform-template
-          path: terraform
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       # -------------------------------
       # ⚙️ DEBUG: Verificar estrutura e conteúdo do Terraform Template (mantido para validação)
@@ -149,9 +167,9 @@ jobs:
           AWS_REGION: ${{ env.AWS_REGION }} # AWS_REGION agora vem do env carregado
           PROJECT_NAME: ${{ env.PROJECT_NAME }}
           ENVIRONMENT: ${{ env.ENVIRONMENT }}
-          create_sqs_queue: ${{ env.CREATE_SQS_QUEUE }} # CREATE_SQS_QUEUE agora vem do env carregado
-          use_existing_sqs_trigger: ${{ env.USE_EXISTING_SQS_TRIGGER }} # USE_EXISTING_SQS_TRIGGER agora vem do env carregado
-          existing_sqs_queue_arn: ${{ env.EXISTING_SQS_QUEUE_ARN }} # EXISTING_SQS_QUEUE_ARN agora vem do env carregado
+          create_sqs_queue: ${{ env.CREATE_SQS_QUEUE }}
+          use_existing_sqs_trigger: ${{ env.USE_EXISTING_SQS_TRIGGER }}
+          existing_sqs_queue_arn: ${{ env.EXISTING_SQS_QUEUE_ARN }}
 
       # -------------------------------
       # 🚚 MOVER terraform.auto.tfvars.json para o diretório correto
@@ -209,9 +227,9 @@ jobs:
           project_name: ${{ env.PROJECT_NAME }}
           environment: ${{ env.ENVIRONMENT }}
           terraform_path: ${{ env.TERRAFORM_PATH }} 
-          create_sqs_queue: ${{ env.CREATE_SQS_QUEUE }} # CREATE_SQS_QUEUE agora vem do env carregado
-          use_existing_sqs_trigger: ${{ env.USE_EXISTING_SQS_TRIGGER }} # USE_EXISTING_SQS_TRIGGER agora vem do env carregado
-          existing_sqs_queue_arn: ${{ env.EXISTING_SQS_QUEUE_ARN }} # EXISTING_SQS_QUEUE_ARN agora vem do env carregado
+          create_sqs_queue: ${{ env.CREATE_SQS_QUEUE }}
+          use_existing_sqs_trigger: ${{ env.USE_EXISTING_SQS_TRIGGER }}
+          existing_sqs_queue_arn: ${{ env.EXISTING_SQS_QUEUE_ARN }}
           lambda_function_name: ${{ steps.calculate_lambda_name.outputs.lambda_name }}
 
       - name: Validar Terraform
