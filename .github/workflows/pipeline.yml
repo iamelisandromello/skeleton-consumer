@@ -30,7 +30,7 @@ jobs:
 
       # -------------------------------
       # ✅ NOVO PASSO: Carregar variáveis de configuração do arquivo externo
-      # (AGORA MUITO MAIS ROBUSTO)
+      # (AGORA MUITO MAIS ROBUSTO PARA COMENTÁRIOS E ESPAÇOS)
       # Este passo preenche as variáveis de ambiente do GitHub Actions com os valores de pipeline.env
       # -------------------------------
       - name: Load Configuration Variables
@@ -38,15 +38,16 @@ jobs:
           echo "Carregando variáveis de configuração do pipeline.env..."
           if [ -f "${{ github.workspace }}/pipeline.env" ]; then
             # Loop através do arquivo pipeline.env para exportar cada variável explicitamente.
-            # Isso é mais robusto do que 'grep >> $GITHUB_ENV' para garantir que todas as variáveis sejam lidas e exportadas.
             while IFS='=' read -r key value; do
               # Pula comentários (#) e linhas vazias
               if [[ -z "$key" || "$key" =~ ^\s*# ]]; then
                 continue
-              fi # CORREÇÃO: 'Fim' alterado para 'fi'
-              # Remove espaços em branco extras do início/fim da chave e valor
-              key=$(echo "$key" | xargs)
-              value=$(echo "$value" | xargs)
+              fi
+              
+              # CORREÇÃO CRÍTICA: Remove qualquer coisa após o primeiro '#' (comentário) do valor,
+              # e então remove espaços em branco extras do início/fim da chave e valor.
+              value=$(echo "${value%%#*}" | xargs) # Remove comentário e então trim
+              key=$(echo "$key" | xargs) # Apenas trim para a chave
 
               # Adiciona a variável ao ambiente do GITHUB_ENV para que ela persista em passos futuros.
               echo "$key=$value" >> "$GITHUB_ENV"
