@@ -19,7 +19,7 @@ env:
   TERRAFORM_PATH: terraform/terraform 
   # Variável para controlar a criação de uma NOVA fila SQS
   # Defina como 'false' se não quiser criar a fila SQS
-  CREATE_SQS_QUEUE: true # Definido como false para testar o novo cenário
+  CREATE_SQS_QUEUE: false # Definido como false para testar o novo cenário
 
   # NOVO: Variável para controlar se usaremos uma fila SQS EXISTENTE como trigger
   # Defina como 'true' para habilitar esta funcionalidade
