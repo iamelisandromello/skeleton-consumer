@@ -35,6 +35,18 @@ jobs:
     
     steps:
       # -------------------------------
+      # ✅ NOVO PASSO: Validação das variáveis de SQS
+      # -------------------------------
+      - name: Validate SQS Configuration
+        run: |
+          if [[ "${{ env.CREATE_SQS_QUEUE }}" == "true" && "${{ env.USE_EXISTING_SQS_TRIGGER }}" == "true" ]]; then
+            echo "::error::ERRO DE CONFIGURAÇÃO SQS: As variáveis 'CREATE_SQS_QUEUE' e 'USE_EXISTING_SQS_TRIGGER' não podem ser 'true' ao mesmo tempo."
+            echo "Por favor, defina apenas uma delas como 'true' para escolher entre criar uma nova fila SQS ou usar uma existente como trigger."
+            exit 1
+          fi
+          echo "✅ Configuração de SQS validada com sucesso."
+
+      # -------------------------------
       # 🧾 CHECKOUT Application
       # -------------------------------
       - name: Checkout code
@@ -155,7 +167,7 @@ jobs:
           ls -lah ${{ env.TERRAFORM_PATH }}/
           echo "---"
           echo "📄 Conteúdo de ${{ env.TERRAFORM_PATH }}/terraform.auto.tfvars.json (se existir):"
-          cat ${{ env.TERRAFORM_PATH }}/terraform.auto.tfvars.json 2>/dev/null || echo "❌ Arquivo terraform.auto.tfvars.json não encontrado no diretório correto."
+          cat terraform/terraform.auto.tfvars.json 2>/dev/null || echo "❌ Arquivo terraform.auto.tfvars.json não encontrado no diretório correto."
           echo "---"
 
       # -------------------------------
