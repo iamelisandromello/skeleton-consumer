@@ -20,12 +20,42 @@ env:
   # CREATE_SQS_QUEUE: false <-- REMOVIDO: Será carregado do pipeline.env
   # USE_EXISTING_SQS_TRIGGER: true <-- REMOVIDO: Será carregado do pipeline.env
   # EXISTING_SQS_QUEUE_ARN: "arn:aws:sqs:us-east-1:125702582030:skeleton-consumer-queue" <-- REMOVIDO: Será carregado do pipeline.env
+  # NOVO: EXISTING_SQS_QUEUE_NAME não é definido aqui, mas virá do pipeline.env
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     
     steps:
+      # -------------------------------
+      # ✅ PASSO: Carregar variáveis de configuração do arquivo externo
+      # -------------------------------
+      - name: Load Configuration Variables
+        run: |
+          echo "Carregando variáveis de configuração do pipeline.env..."
+          if [ -f "${{ github.workspace }}/pipeline.env" ]; then
+            grep -vE '^\s*#|^\s*$' "${{ github.workspace }}/pipeline.env" >> $GITHUB_ENV 
+            echo "Variáveis carregadas com sucesso:"
+            cat "${{ github.workspace }}/pipeline.env"
+          else
+            echo "❌ ERRO: O arquivo 'pipeline.env' não foi encontrado na raiz do repositório (${{ github.workspace }})."
+            echo "Por favor, certifique-se de que 'pipeline.env' foi commitado e está na raiz do seu repositório 'consumer'."
+            exit 1
+          fi
+          echo "---"
+
+      # -------------------------------
+      # ✅ Validação das variáveis de SQS (usa variáveis carregadas)
+      # -------------------------------
+      - name: Validate SQS Configuration
+        run: |
+          if [[ "${{ env.CREATE_SQS_QUEUE }}" == "true" && "${{ env.USE_EXISTING_SQS_TRIGGER }}" == "true" ]]; then
+            echo "::error::ERRO DE CONFIGURAÇÃO SQS: As variáveis 'CREATE_SQS_QUEUE' e 'USE_EXISTING_SQS_TRIGGER' não podem ser 'true' ao mesmo tempo."
+            echo "Por favor, defina apenas uma delas como 'true' para escolher entre criar uma nova fila SQS ou usar uma existente como trigger."
+            exit 1
+          fi
+          echo "✅ Configuração de SQS validada com sucesso."
+
       # -------------------------------
       # 🧾 CHECKOUT Application
       # -------------------------------
@@ -41,54 +71,6 @@ jobs:
           repository: iamelisandromello/skeleton-terraform-template
           path: terraform
           token: ${{ secrets.GITHUB_TOKEN }}
-
-      # -------------------------------
-      # NOVO PASSO: Debug para verificar o arquivo pipeline.env
-      # -------------------------------
-      - name: Debug - List Files in Workspace
-        run: |
-          echo "Listando conteúdo do GITHUB_WORKSPACE (raiz do repositório 'consumer'):"
-          ls -lah "${{ github.workspace }}"
-          echo "---"
-          echo "Verificando se pipeline.env existe explicitamente:"
-          if [ -f "${{ github.workspace }}/pipeline.env" ]; then
-            echo "✅ pipeline.env encontrado em ${{ github.workspace }}/"
-            echo "Conteúdo de pipeline.env:"
-            cat "${{ github.workspace }}/pipeline.env"
-          else
-            echo "❌ pipeline.env NÃO encontrado em ${{ github.workspace }}/"
-          fi
-          echo "---"
-
-      # -------------------------------
-      # ✅ PASSO ORIGINAL: Carregar variáveis de configuração do arquivo externo
-      # -------------------------------
-      - name: Load Configuration Variables
-        run: |
-          echo "Carregando variáveis de configuração do pipeline.env..."
-          if [ -f "${{ github.workspace }}/pipeline.env" ]; then
-            # CORREÇÃO CRÍTICA: Filtra comentários e linhas em branco antes de adicionar ao GITHUB_ENV
-            grep -vE '^\s*#|^\s*$' "${{ github.workspace }}/pipeline.env" >> $GITHUB_ENV 
-            echo "Variáveis carregadas com sucesso:"
-            cat "${{ github.workspace }}/pipeline.env" # Apenas para visualização, não para adicionar ao env novamente
-          else
-            echo "❌ ERRO: O arquivo 'pipeline.env' não foi encontrado na raiz do repositório (${{ github.workspace }})."
-            echo "Por favor, certifique-se de que 'pipeline.env' foi commitado e está na raiz do seu repositório 'consumer'."
-            exit 1
-          fi
-          echo "---"
-
-      # -------------------------------
-      # ✅ Validação das variáveis de SQS (mantido, agora usa variáveis carregadas)
-      # -------------------------------
-      - name: Validate SQS Configuration
-        run: |
-          if [[ "${{ env.CREATE_SQS_QUEUE }}" == "true" && "${{ env.USE_EXISTING_SQS_TRIGGER }}" == "true" ]]; then
-            echo "::error::ERRO DE CONFIGURAÇÃO SQS: As variáveis 'CREATE_SQS_QUEUE' e 'USE_EXISTING_SQS_TRIGGER' não podem ser 'true' ao mesmo tempo."
-            echo "Por favor, defina apenas uma delas como 'true' para escolher entre criar uma nova fila SQS ou usar uma existente como trigger."
-            exit 1
-          fi
-          echo "✅ Configuração de SQS validada com sucesso."
 
       # -------------------------------
       # ⚙️ DEBUG: Verificar estrutura e conteúdo do Terraform Template (mantido para validação)
@@ -165,9 +147,10 @@ jobs:
           AWS_REGION: ${{ env.AWS_REGION }}
           PROJECT_NAME: ${{ env.PROJECT_NAME }}
           ENVIRONMENT: ${{ env.ENVIRONMENT }}
-          create_sqs_queue: ${{ env.CREATE_SQS_QUEUE }}
+          create_sqs_queue: ${{ env.CREATE_SQS_QUEUE }} 
           use_existing_sqs_trigger: ${{ env.USE_EXISTING_SQS_TRIGGER }}
-          existing_sqs_queue_arn: ${{ env.EXISTING_SQS_QUEUE_ARN }}
+          # NOVO: Passando o NOME da fila SQS existente, não o ARN
+          existing_sqs_queue_name: ${{ env.EXISTING_SQS_QUEUE_NAME }} 
 
       # -------------------------------
       # 🚚 MOVER terraform.auto.tfvars.json para o diretório correto
@@ -199,11 +182,10 @@ jobs:
           echo "---"
 
       # -------------------------------
-      # NOVO PASSO: Calcular o nome da função Lambda
-      # Este passo isola a lógica de construção do nome da Lambda para evitar erros de parsing YAML.
+      # NOVO PASSO: Calcular o nome da função Lambda (mantido como está)
       # -------------------------------
       - name: Calculate Lambda Function Name
-        id: calculate_lambda_name # ID para referenciar os outputs deste passo
+        id: calculate_lambda_name
         shell: bash
         run: |
           LAMBDA_NAME="${{ env.PROJECT_NAME }}"
@@ -211,7 +193,7 @@ jobs:
             LAMBDA_NAME="${LAMBDA_NAME}-${{ env.ENVIRONMENT }}"
           fi
           echo "Generated Lambda Name: $LAMBDA_NAME"
-          echo "lambda_name=$LAMBDA_NAME" >> "$GITHUB_OUTPUT" # Armazena o nome da Lambda para uso em passos futuros
+          echo "lambda_name=$LAMBDA_NAME" >> "$GITHUB_OUTPUT"
 
       # -------------------------------
       # 🔄 IMPORT, VALIDATE & APPLY TERRAFORM
@@ -225,9 +207,10 @@ jobs:
           project_name: ${{ env.PROJECT_NAME }}
           environment: ${{ env.ENVIRONMENT }}
           terraform_path: ${{ env.TERRAFORM_PATH }} 
-          create_sqs_queue: ${{ env.CREATE_SQS_QUEUE }}
+          create_sqs_queue: ${{ env.CREATE_SQS_QUEUE }} 
           use_existing_sqs_trigger: ${{ env.USE_EXISTING_SQS_TRIGGER }}
-          existing_sqs_queue_arn: ${{ env.EXISTING_SQS_QUEUE_ARN }}
+          # NOVO: Passando o NOME da fila SQS existente, não o ARN
+          existing_sqs_queue_name: ${{ env.EXISTING_SQS_QUEUE_NAME }} 
           lambda_function_name: ${{ steps.calculate_lambda_name.outputs.lambda_name }}
 
       - name: Validar Terraform
@@ -248,4 +231,5 @@ jobs:
           terraform_path: ${{ env.TERRAFORM_PATH }} 
           create_sqs_queue: ${{ env.CREATE_SQS_QUEUE }}
           use_existing_sqs_trigger: ${{ env.USE_EXISTING_SQS_TRIGGER }}
-          existing_sqs_queue_arn: ${{ env.EXISTING_SQS_QUEUE_ARN }}
+          # NOVO: Passando o NOME da fila SQS existente, não o ARN
+          existing_sqs_queue_name: ${{ env.EXISTING_SQS_QUEUE_NAME }}
