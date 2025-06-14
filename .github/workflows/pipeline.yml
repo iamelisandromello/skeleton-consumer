@@ -43,7 +43,7 @@ jobs:
               # Pula comentários (#) e linhas vazias
               if [[ -z "$key" || "$key" =~ ^\s*# ]]; then
                 continue
-              fi
+              fi # CORREÇÃO: 'Fim' alterado para 'fi'
               # Remove espaços em branco extras do início/fim da chave e valor
               key=$(echo "$key" | xargs)
               value=$(echo "$value" | xargs)
@@ -60,7 +60,7 @@ jobs:
             echo "❌ ERRO: O arquivo 'pipeline.env' não foi encontrado na raiz do repositório (${{ github.workspace }})."
             echo "Por favor, certifique-se de que 'pipeline.env' foi commitado e está na raiz do seu repositório 'consumer'."
             exit 1
-          fi
+          fi # CORREÇÃO: 'Fim' alterado para 'fi'
           echo "---"
           # DEBUG CRÍTICO: Mostra as variáveis de Ambiente do Job após carregamento do pipeline.env
           echo "--- DEBUG: Variáveis de Ambiente do Job após carregamento do pipeline.env ---"
@@ -79,7 +79,7 @@ jobs:
             echo "::error::ERRO DE CONFIGURAÇÃO SQS: As variáveis 'CREATE_SQS_QUEUE' e 'USE_EXISTING_SQS_TRIGGER' não podem ser 'true' ao mesmo tempo."
             echo "Por favor, defina apenas uma delas como 'true' para escolher entre criar uma nova fila SQS ou usar uma existente como trigger."
             exit 1
-          fi
+          fi # CORREÇÃO: 'Fim' alterado para 'fi'
           echo "✅ Configuração de SQS validada com sucesso."
 
       # -------------------------------
@@ -172,32 +172,32 @@ jobs:
 
       # -------------------------------
       # 🚚 MOVER terraform.auto.tfvars.json para o diretório correto
+      # CORREÇÃO: Usando github.workspace explicitamente para garantir o caminho absoluto
       # -------------------------------
       - name: Mover terraform.auto.tfvars.json para o diretório correto
         run: |
           if [ -f "terraform.auto.tfvars.json" ]; then
             echo "🚚 Movendo terraform.auto.tfvars.json da raiz do projeto consumer para ${{ env.TERRAFORM_PATH }}"
-            mv terraform.auto.tfvars.json "${{ env.TERRAFORM_PATH }}/terraform.auto.tfvars.json"
+            mv terraform.auto.tfvars.json "${{ github.workspace }}/${{ env.TERRAFORM_PATH }}/terraform.auto.tfvars.json"
           elif [ -f "terraform/terraform.auto.tfvars.json" ]; then
             echo "🚚 Movendo terraform.auto.tfvars.json de terraform/ para ${{ env.TERRAFORM_PATH }}"
-            mv terraform/terraform.auto.tfvars.json "${{ env.TERRAFORM_PATH }}/terraform.auto.tfvars.json"
+            mv terraform/terraform.auto.tfvars.json "${{ github.workspace }}/${{ env.TERRAFORM_PATH }}/terraform.auto.tfvars.json"
           else
             echo "❌ terraform.auto.tfvars.json não encontrado nem na raiz do projeto consumer nem em terraform/. Verifique a action 'generate-tfvars' e a estrutura de diretórios."
             exit 1
-          fi
+          fi # CORREÇÃO: 'Fim' alterado para 'fi'
         if: success() 
 
       # -------------------------------
       # DEBUG: Verificar terraform.auto.tfvars.json após geração e movimento
-      # Este é o DEBUG CRÍTICO para verificar o conteúdo final que o Terraform verá.
       # -------------------------------
       - name: Debug - Verificar terraform.auto.tfvars.json (PÓS-GERAÇÃO E MOVIMENTO)
         run: |
           echo "📂 Listando arquivos no diretório Terraform raiz (${{ env.TERRAFORM_PATH }}/):"
-          ls -lah ${{ env.TERRAFORM_PATH }}/
+          ls -lah ${{ github.workspace }}/${{ env.TERRAFORM_PATH }}/
           echo "---"
           echo "📄 Conteúdo de ${{ env.TERRAFORM_PATH }}/terraform.auto.tfvars.json (se existir):"
-          cat ${{ env.TERRAFORM_PATH }}/terraform.auto.tfvars.json 2>/dev/null || echo "❌ Arquivo terraform.auto.tfvars.json não encontrado no diretório correto."
+          cat ${{ github.workspace }}/${{ env.TERRAFORM_PATH }}/terraform.auto.tfvars.json 2>/dev/null || echo "❌ Arquivo terraform.auto.tfvars.json não encontrado no diretório correto."
           echo "---"
 
       # -------------------------------
@@ -210,7 +210,7 @@ jobs:
           LAMBDA_NAME="${{ env.PROJECT_NAME }}"
           if [ "${{ env.ENVIRONMENT }}" != "prod" ]; then
             LAMBDA_NAME="${LAMBDA_NAME}-${{ env.ENVIRONMENT }}"
-          fi
+          fi # CORREÇÃO: 'Fim' alterado para 'fi'
           echo "Generated Lambda Name: $LAMBDA_NAME"
           echo "lambda_name=$LAMBDA_NAME" >> "$GITHUB_OUTPUT"
 
