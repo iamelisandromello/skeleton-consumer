@@ -17,6 +17,8 @@ env:
   ENVIRONMENT: staging
   S3_BUCKET_NAME: my-shared-lambdas-bucket
   TERRAFORM_PATH: terraform/terraform 
+  # NOTA: CREATE_SQS_QUEUE e USE_EXISTING_SQS_TRIGGER definidas em pipeline.env
+  # serão carregadas para o ambiente global do job pelo passo 'Load Configuration Variables'.
 
 jobs:
   deploy:
@@ -25,15 +27,13 @@ jobs:
     steps:
       # -------------------------------
       # 🧾 PASSO CRÍTICO: Checkout do Código da Aplicação - DEVE SER O PRIMEIRO
-      # Este passo clona o repositório 'consumer' para o ambiente do runner,
-      # tornando 'pipeline.env' e outros arquivos acessíveis.
       # -------------------------------
       - name: Checkout code
         uses: actions/checkout@v4
 
       # -------------------------------
       # ✅ NOVO PASSO: Carregar variáveis de configuração do arquivo externo
-      # (Agora executado APÓS o checkout do código)
+      # Este passo preenche as variáveis de ambiente do GitHub Actions com os valores de pipeline.env
       # -------------------------------
       - name: Load Configuration Variables
         run: |
@@ -42,7 +42,7 @@ jobs:
           if [ -f "${{ github.workspace }}/pipeline.env" ]; then
             # Filtra comentários e linhas em branco antes de adicionar ao GITHUB_ENV
             grep -vE '^\s*#|^\s*$' "${{ github.workspace }}/pipeline.env" >> $GITHUB_ENV 
-            echo "Variáveis carregadas com sucesso:"
+            echo "Variáveis carregadas com sucesso de pipeline.env:"
             cat "${{ github.workspace }}/pipeline.env" # Apenas para visualização no log
           else
             echo "❌ ERRO: O arquivo 'pipeline.env' não foi encontrado na raiz do repositório (${{ github.workspace }})."
@@ -50,12 +50,19 @@ jobs:
             exit 1
           fi
           echo "---"
+          # DEBUG CRÍTICO: Mostra as variáveis de ambiente APÓS serem carregadas do pipeline.env
+          echo "--- DEBUG: Variáveis de Ambiente do Job após carregamento do pipeline.env ---"
+          env | grep -E '^(CREATE_SQS_QUEUE|USE_EXISTING_SQS_TRIGGER|EXISTING_SQS_QUEUE_NAME|PROJECT_NAME|ENVIRONMENT|S3_BUCKET_NAME|AWS_REGION)'
+          echo "------------------------------------------------------------------"
+
 
       # -------------------------------
       # ✅ Validação das variáveis de SQS (mantido, agora usa variáveis carregadas)
       # -------------------------------
       - name: Validate SQS Configuration
         run: |
+          echo "DEBUG: CREATE_SQS_QUEUE = '${{ env.CREATE_SQS_QUEUE }}'"
+          echo "DEBUG: USE_EXISTING_SQS_TRIGGER = '${{ env.USE_EXISTING_SQS_TRIGGER }}'"
           if [[ "${{ env.CREATE_SQS_QUEUE }}" == "true" && "${{ env.USE_EXISTING_SQS_TRIGGER }}" == "true" ]]; then
             echo "::error::ERRO DE CONFIGURAÇÃO SQS: As variáveis 'CREATE_SQS_QUEUE' e 'USE_EXISTING_SQS_TRIGGER' não podem ser 'true' ao mesmo tempo."
             echo "Por favor, defina apenas uma delas como 'true' para escolher entre criar uma nova fila SQS ou usar uma existente como trigger."
@@ -81,18 +88,17 @@ jobs:
           echo "📂 Listando arquivos e diretórios recursivamente em 'terraform/'"
           ls -R terraform/ || echo "❌ Diretório 'terraform/' não encontrado ou vazio."
           echo "---"
-
-          echo "📄 Conteúdo de terraform/main.tf (se existir, agora DEVE estar vazio):"
-          cat terraform/main.tf 2>/dev/null || echo "❌ terraform/main.tf não encontrado ou vazio."
-          echo "---"
-
+          # Adicionado mais verificações de arquivos chave
           echo "📄 Conteúdo de terraform/terraform/main.tf (agora DEVE estar aqui):"
           cat terraform/terraform/main.tf 2>/dev/null || echo "❌ terraform/terraform/main.tf não encontrado ou vazio. VERIFICAR!"
           echo "---"
-
           echo "📄 Conteúdo de terraform/terraform/modules/sqs/main.tf (agora DEVE estar aqui):"
           cat terraform/terraform/modules/sqs/main.tf 2>/dev/null || echo "❌ terraform/terraform/modules/sqs/main.tf não encontrado ou vazio. VERIFICAR!"
           echo "---"
+          echo "📄 Conteúdo de terraform/terraform/modules/lambda/variables.tf (verifica nova variável):"
+          cat terraform/terraform/modules/lambda/variables.tf 2>/dev/null || echo "❌ terraform/terraform/modules/lambda/variables.tf não encontrado ou vazio. VERIFICAR!"
+          echo "---"
+
 
       # -------------------------------
       # ⚙️ SETUP NODE & VARS
@@ -148,6 +154,7 @@ jobs:
           AWS_REGION: ${{ env.AWS_REGION }}
           PROJECT_NAME: ${{ env.PROJECT_NAME }}
           ENVIRONMENT: ${{ env.ENVIRONMENT }}
+          # Passando as variáveis de controle da SQS como inputs para a action generate-tfvars
           create_sqs_queue: ${{ env.CREATE_SQS_QUEUE }} 
           use_existing_sqs_trigger: ${{ env.USE_EXISTING_SQS_TRIGGER }}
           existing_sqs_queue_name: ${{ env.EXISTING_SQS_QUEUE_NAME }} 
@@ -171,6 +178,7 @@ jobs:
 
       # -------------------------------
       # DEBUG: Verificar terraform.auto.tfvars.json após geração e movimento
+      # Este é o DEBUG CRÍTICO para verificar o conteúdo final que o Terraform verá.
       # -------------------------------
       - name: Debug - Verificar terraform.auto.tfvars.json (PÓS-GERAÇÃO E MOVIMENTO)
         run: |
@@ -178,7 +186,7 @@ jobs:
           ls -lah ${{ env.TERRAFORM_PATH }}/
           echo "---"
           echo "📄 Conteúdo de ${{ env.TERRAFORM_PATH }}/terraform.auto.tfvars.json (se existir):"
-          cat terraform/terraform.auto.tfvars.json 2>/dev/null || echo "❌ Arquivo terraform.auto.tfvars.json não encontrado no diretório correto."
+          cat ${{ env.TERRAFORM_PATH }}/terraform.auto.tfvars.json 2>/dev/null || echo "❌ Arquivo terraform.auto.tfvars.json não encontrado no diretório correto."
           echo "---"
 
       # -------------------------------
@@ -207,6 +215,7 @@ jobs:
           project_name: ${{ env.PROJECT_NAME }}
           environment: ${{ env.ENVIRONMENT }}
           terraform_path: ${{ env.TERRAFORM_PATH }} 
+          # Passando as variáveis de controle da SQS para a action de import
           create_sqs_queue: ${{ env.CREATE_SQS_QUEUE }} 
           use_existing_sqs_trigger: ${{ env.USE_EXISTING_SQS_TRIGGER }}
           existing_sqs_queue_name: ${{ env.EXISTING_SQS_QUEUE_NAME }} 
@@ -228,6 +237,7 @@ jobs:
           GLOBAL_ENV_VARS_JSON: ${{ secrets.GLOBAL_ENV_VARS_JSON }}
           ENVIRONMENTS_JSON: ${{ secrets.ENVIRONMENTS }}
           terraform_path: ${{ env.TERRAFORM_PATH }} 
+          # Passando as variáveis de controle da SQS para o plan-apply
           create_sqs_queue: ${{ env.CREATE_SQS_QUEUE }}
           use_existing_sqs_trigger: ${{ env.USE_EXISTING_SQS_TRIGGER }}
           existing_sqs_queue_name: ${{ env.EXISTING_SQS_QUEUE_NAME }}
