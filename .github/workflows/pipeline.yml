@@ -11,7 +11,7 @@ on:
 
 env:
   # Apenas segredos devem ser definidos aqui no nível global do workflow.
-  # Variáveis como PROJECT_NAME, ENVIRONMENT, S3_BUCKET_NAME, AWS_REGION, TERRAFORM_PATH
+  # Variáveis como S3_BUCKET_NAME, AWS_REGION, TERRAFORM_PATH
   # e as variáveis SQS (CREATE_SQS_QUEUE, USE_EXISTING_SQS_TRIGGER, EXISTING_SQS_QUEUE_NAME)
   # serão carregadas *dinamicamente* do pipeline.env pelo passo 'Load Configuration Variables'.
   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
