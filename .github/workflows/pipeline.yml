@@ -10,24 +10,16 @@ on:
   workflow_dispatch:
 
 env:
-  AWS_REGION: us-east-1
+  # AWS_REGION: us-east-1 <-- REMOVIDO: Será carregado do pipeline.env
   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
   PROJECT_NAME: my-lambda
   ENVIRONMENT: staging
   S3_BUCKET_NAME: my-shared-lambdas-bucket
   TERRAFORM_PATH: terraform/terraform 
-  # Variável para controlar a criação de uma NOVA fila SQS
-  # Defina como 'false' se não quiser criar a fila SQS
-  CREATE_SQS_QUEUE: false # Definido como false para testar o novo cenário
-
-  # NOVO: Variável para controlar se usaremos uma fila SQS EXISTENTE como trigger
-  # Defina como 'true' para habilitar esta funcionalidade
-  USE_EXISTING_SQS_TRIGGER: true # Definido como true para testar o novo cenário
-
-  # NOVO: ARN da fila SQS EXISTENTE se USE_EXISTING_SQS_TRIGGER for true
-  # Substitua pelo ARN real da sua fila SQS existente, se USE_EXISTING_SQS_TRIGGER for true
-  EXISTING_SQS_QUEUE_ARN: "arn:aws:sqs:us-east-1:125702582030:skeleton-consumer-queue" # EX: Substitua pelo ARN real
+  # CREATE_SQS_QUEUE: false <-- REMOVIDO: Será carregado do pipeline.env
+  # USE_EXISTING_SQS_TRIGGER: true <-- REMOVIDO: Será carregado do pipeline.env
+  # EXISTING_SQS_QUEUE_ARN: "arn:aws:sqs:us-east-1:125702582030:skeleton-consumer-queue" <-- REMOVIDO: Será carregado do pipeline.env
 
 jobs:
   deploy:
@@ -35,7 +27,27 @@ jobs:
     
     steps:
       # -------------------------------
-      # ✅ NOVO PASSO: Validação das variáveis de SQS
+      # ✅ NOVO PASSO: Carregar variáveis de configuração do arquivo externo
+      # -------------------------------
+      - name: Load Configuration Variables
+        run: |
+          echo "Carregando variáveis de configuração do pipeline.env..."
+          # Verifica se o arquivo pipeline.env existe
+          if [ -f "pipeline.env" ]; then
+            # Seta as variáveis de ambiente a partir do arquivo
+            # O comando '>> $GITHUB_ENV' é o mecanismo do GitHub Actions para tornar variáveis disponíveis para passos futuros
+            cat pipeline.env >> $GITHUB_ENV
+            echo "Variáveis carregadas com sucesso:"
+            cat pipeline.env
+          else
+            echo "❌ ERRO: O arquivo 'pipeline.env' não foi encontrado na raiz do repositório."
+            echo "Por favor, crie 'pipeline.env' com as variáveis de configuração necessárias."
+            exit 1
+          fi
+          echo "---"
+
+      # -------------------------------
+      # ✅ Validação das variáveis de SQS (mantido, agora usa variáveis carregadas)
       # -------------------------------
       - name: Validate SQS Configuration
         run: |
@@ -134,12 +146,12 @@ jobs:
           s3_bucket_name: ${{ env.S3_BUCKET_NAME }}
           aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: ${{ env.AWS_REGION }}
+          AWS_REGION: ${{ env.AWS_REGION }} # AWS_REGION agora vem do env carregado
           PROJECT_NAME: ${{ env.PROJECT_NAME }}
           ENVIRONMENT: ${{ env.ENVIRONMENT }}
-          create_sqs_queue: ${{ env.CREATE_SQS_QUEUE }} 
-          use_existing_sqs_trigger: ${{ env.USE_EXISTING_SQS_TRIGGER }}
-          existing_sqs_queue_arn: ${{ env.EXISTING_SQS_QUEUE_ARN }}
+          create_sqs_queue: ${{ env.CREATE_SQS_QUEUE }} # CREATE_SQS_QUEUE agora vem do env carregado
+          use_existing_sqs_trigger: ${{ env.USE_EXISTING_SQS_TRIGGER }} # USE_EXISTING_SQS_TRIGGER agora vem do env carregado
+          existing_sqs_queue_arn: ${{ env.EXISTING_SQS_QUEUE_ARN }} # EXISTING_SQS_QUEUE_ARN agora vem do env carregado
 
       # -------------------------------
       # 🚚 MOVER terraform.auto.tfvars.json para o diretório correto
@@ -193,14 +205,13 @@ jobs:
         with:
           aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws_region: ${{ env.AWS_REGION }}
+          aws_region: ${{ env.AWS_REGION }} # AWS_REGION agora vem do env carregado
           project_name: ${{ env.PROJECT_NAME }}
           environment: ${{ env.ENVIRONMENT }}
           terraform_path: ${{ env.TERRAFORM_PATH }} 
-          create_sqs_queue: ${{ env.CREATE_SQS_QUEUE }} 
-          use_existing_sqs_trigger: ${{ env.USE_EXISTING_SQS_TRIGGER }}
-          existing_sqs_queue_arn: ${{ env.EXISTING_SQS_QUEUE_ARN }}
-          # CORREÇÃO: Usar o output do passo anterior para passar o nome da Lambda
+          create_sqs_queue: ${{ env.CREATE_SQS_QUEUE }} # CREATE_SQS_QUEUE agora vem do env carregado
+          use_existing_sqs_trigger: ${{ env.USE_EXISTING_SQS_TRIGGER }} # USE_EXISTING_SQS_TRIGGER agora vem do env carregado
+          existing_sqs_queue_arn: ${{ env.EXISTING_SQS_QUEUE_ARN }} # EXISTING_SQS_QUEUE_ARN agora vem do env carregado
           lambda_function_name: ${{ steps.calculate_lambda_name.outputs.lambda_name }}
 
       - name: Validar Terraform
@@ -219,6 +230,6 @@ jobs:
           GLOBAL_ENV_VARS_JSON: ${{ secrets.GLOBAL_ENV_VARS_JSON }}
           ENVIRONMENTS_JSON: ${{ secrets.ENVIRONMENTS }}
           terraform_path: ${{ env.TERRAFORM_PATH }} 
-          create_sqs_queue: ${{ env.CREATE_SQS_QUEUE }}
-          use_existing_sqs_trigger: ${{ env.USE_EXISTING_SQS_TRIGGER }}
-          existing_sqs_queue_arn: ${{ env.EXISTING_SQS_QUEUE_ARN }}
+          create_sqs_queue: ${{ env.CREATE_SQS_QUEUE }} # CREATE_SQS_QUEUE agora vem do env carregado
+          use_existing_sqs_trigger: ${{ env.USE_EXISTING_SQS_TRIGGER }} # USE_EXISTING_SQS_TRIGGER agora vem do env carregado
+          existing_sqs_queue_arn: ${{ env.EXISTING_SQS_QUEUE_ARN }} # EXISTING_SQS_QUEUE_ARN agora vem do env carregado
