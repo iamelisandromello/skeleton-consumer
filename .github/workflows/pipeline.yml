@@ -23,7 +23,7 @@ env:
 
   # NOVO: Variável para controlar se usaremos uma fila SQS EXISTENTE como trigger
   # Defina como 'true' para habilitar esta funcionalidade
-  USE_EXISTING_SQS_TRIGGER: false # Definido como true para testar o novo cenário
+  USE_EXISTING_SQS_TRIGGER: true # Definido como true para testar o novo cenário
 
   # NOVO: ARN da fila SQS EXISTENTE se USE_EXISTING_SQS_TRIGGER for true
   # Substitua pelo ARN real da sua fila SQS existente, se USE_EXISTING_SQS_TRIGGER for true
