@@ -172,9 +172,9 @@ jobs:
           environment: ${{ env.ENVIRONMENT }}
           terraform_path: ${{ env.TERRAFORM_PATH }} 
           create_sqs_queue: ${{ env.CREATE_SQS_QUEUE }} 
-          # NOVO: Passando as novas variáveis para a action de import
           use_existing_sqs_trigger: ${{ env.USE_EXISTING_SQS_TRIGGER }}
           existing_sqs_queue_arn: ${{ env.EXISTING_SQS_QUEUE_ARN }}
+          lambda_function_name: ${{ env.PROJECT_NAME }}${{ env.ENVIRONMENT == 'prod' ? '' : format('-%s', env.ENVIRONMENT) }} # Deriva o nome da Lambda          
 
       - name: Validar Terraform
         uses: iamelisandromello/skeleton-pipeline-template/validate-terraform@main
