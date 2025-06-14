@@ -126,7 +126,6 @@ jobs:
           PROJECT_NAME: ${{ env.PROJECT_NAME }}
           ENVIRONMENT: ${{ env.ENVIRONMENT }}
           create_sqs_queue: ${{ env.CREATE_SQS_QUEUE }} 
-          # PASSANDO AS NOVAS VARIÁVEIS para generate-tfvars
           use_existing_sqs_trigger: ${{ env.USE_EXISTING_SQS_TRIGGER }}
           existing_sqs_queue_arn: ${{ env.EXISTING_SQS_QUEUE_ARN }}
 
@@ -139,7 +138,7 @@ jobs:
             echo "🚚 Movendo terraform.auto.tfvars.json da raiz do projeto consumer para ${{ env.TERRAFORM_PATH }}"
             mv terraform.auto.tfvars.json "${{ env.TERRAFORM_PATH }}/terraform.auto.tfvars.json"
           elif [ -f "terraform/terraform.auto.tfvars.json" ]; then
-            echo "🚚 Movendo terraform.auto.tfvars.json de terraform/ para ${{ env.TERRAFORM_PATH }}"
+            echo "🚚 Movendo terraform/terraform.auto.tfvars.json de terraform/ para ${{ env.TERRAFORM_PATH }}"
             mv terraform/terraform.auto.tfvars.json "${{ env.TERRAFORM_PATH }}/terraform.auto.tfvars.json"
           else
             echo "❌ terraform.auto.tfvars.json não encontrado nem na raiz do projeto consumer nem em terraform/. Verifique a action 'generate-tfvars' e a estrutura de diretórios."
@@ -160,6 +159,21 @@ jobs:
           echo "---"
 
       # -------------------------------
+      # NOVO PASSO: Calcular o nome da função Lambda
+      # Este passo isola a lógica de construção do nome da Lambda para evitar erros de parsing YAML.
+      # -------------------------------
+      - name: Calculate Lambda Function Name
+        id: calculate_lambda_name # ID para referenciar os outputs deste passo
+        shell: bash
+        run: |
+          LAMBDA_NAME="${{ env.PROJECT_NAME }}"
+          if [ "${{ env.ENVIRONMENT }}" != "prod" ]; then
+            LAMBDA_NAME="${LAMBDA_NAME}-${{ env.ENVIRONMENT }}"
+          fi
+          echo "Generated Lambda Name: $LAMBDA_NAME"
+          echo "lambda_name=$LAMBDA_NAME" >> "$GITHUB_OUTPUT" # Armazena o nome da Lambda para uso em passos futuros
+
+      # -------------------------------
       # 🔄 IMPORT, VALIDATE & APPLY TERRAFORM
       # -------------------------------    
       - name: Importar recursos existentes
@@ -174,8 +188,8 @@ jobs:
           create_sqs_queue: ${{ env.CREATE_SQS_QUEUE }} 
           use_existing_sqs_trigger: ${{ env.USE_EXISTING_SQS_TRIGGER }}
           existing_sqs_queue_arn: ${{ env.EXISTING_SQS_QUEUE_ARN }}
-          # CORREÇÃO CRÍTICA DO LINT/YAML: Envolver toda a expressão em aspas duplas
-          lambda_function_name: "${{ env.PROJECT_NAME }}${{ env.ENVIRONMENT == 'prod' ? '' : format('-%s', env.ENVIRONMENT) }}" 
+          # CORREÇÃO: Usar o output do passo anterior para passar o nome da Lambda
+          lambda_function_name: ${{ steps.calculate_lambda_name.outputs.lambda_name }}
 
       - name: Validar Terraform
         uses: iamelisandromello/skeleton-pipeline-template/validate-terraform@main
@@ -193,7 +207,6 @@ jobs:
           GLOBAL_ENV_VARS_JSON: ${{ secrets.GLOBAL_ENV_VARS_JSON }}
           ENVIRONMENTS_JSON: ${{ secrets.ENVIRONMENTS }}
           terraform_path: ${{ env.TERRAFORM_PATH }} 
-          # PASSANDO AS NOVAS VARIÁVEIS para plan-apply-terraform
           create_sqs_queue: ${{ env.CREATE_SQS_QUEUE }}
           use_existing_sqs_trigger: ${{ env.USE_EXISTING_SQS_TRIGGER }}
           existing_sqs_queue_arn: ${{ env.EXISTING_SQS_QUEUE_ARN }}
